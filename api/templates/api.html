@@ -1,0 +1,169 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+        
+        <title>Tasks API</title>
+        <link rel="Shortcut Icon" href='{% static "images/smiley.smile.gif" %}' />
+        <link href='{% static "style.css"%}' rel="stylesheet" media="screen">
+        <link rel="stylesheet" href='{% static "bootstrap/dist/css/bootstrap.min.css" %}'>
+        <link rel="stylesheet" href='{% static "datatables/media/css/dataTables.jqueryui.min.css" %}'>
+        <link rel="stylesheet" type="text/css" href='{% static "angular/angular-datatables.css" %}'>
+
+        <script type="text/javascript" src='{% static "jquery/dist/jquery.min.js" %}'></script>
+        <script type="text/javascript" src='{% static "bootstrap/dist/js/bootstrap.min.js" %}'></script>       
+        <script type="text/javascript" src='{% static "datatables/media/js/jquery.dataTables.js" %}'></script>  
+        <script type="text/javascript" src='{% static "angular/angular.min.js" %}'></script> 
+        <script type="text/javascript" src='{% static "angular/angular-datatables.min.js" %}'></script>  
+
+       
+    </head>
+    <body ng-app="api" ng-controller="APIController">
+        <div class="panel panel-primary">
+            <div class="panel-heading">Tasks</div>
+            <div class="panel-body">
+                <a href="#" ng-click="create()">Create Task</a>
+                <table id="api_table" datatable="ng"  class="row-border hover table table-bordered table-condensed table-striped">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Description</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>                                
+                        <tr ng-repeat="task in tasks" >
+                            <td class="ng-cloak"><% task.title %></td>
+                            <td class="ng-cloak"><% task.description %></td>
+                            <td class="ng-cloak">
+                                <a href="#" ng-click="edit(task)">edit</a> | 
+                                <a href="#" ng-click="remove(task)">delete</a>
+                            </td>
+                        </tr>                        
+                     </tbody>                 
+                </table>
+            </div>
+        </div>
+
+<div id="myModal" class="modal fade" role="dialog">
+    <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title"><% option %> Task</h4>
+      </div>
+      <div class="modal-body">
+        <form id='tasks-form' action="#" method="post" role="form" ng-submit="submit()" onsubmit="return false">
+            <label for='username'>Username:</label>
+            <input id='username' type="text" ng-model="username" class="form-control" required='true'>
+            <label for='password'>Password:</label>
+            <input id='password' type="password" ng-model="password" class="form-control" required='true'>
+            <label for='title'>Title:</label>
+            <input id='title' type="text" ng-model="task.title" class="form-control">
+            <label for='desc'>Description:</label> 
+            <input id='desc' type="text" ng-model="task.description" class="form-control">
+
+            <br>
+            <input type="submit" name="" class='btn btn-primary btn-xs'>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+
+    </div>
+</div>
+       
+
+        <script type="text/javascript">
+            var app=angular.module('api', ['datatables'], function($interpolateProvider) {
+                $interpolateProvider.startSymbol('<%');
+                $interpolateProvider.endSymbol('%>');
+            });
+
+            var controllers = {}
+
+            controllers.APIController = function($scope, $http){
+                $scope.option = "";
+                $scope.tasks = {};
+                $scope.task = {'csrfmiddlewaretoken':"{{ csrf_token }}"};
+
+                $http.get("/api/list/").success(function(data){
+                    $scope.tasks = data;
+                });
+
+                $scope.create = function(){
+                    $scope.option = "Create";
+                    $("#myModal").modal('show');
+                }
+
+                $scope.submit = function(){
+                    if ($scope.option=='Edit') {
+                        update_task();
+                    }else if ($scope.option=='Remove') {
+                        delete_task();
+                    }else{
+                        store_task();
+                    }
+                    $("#myModal").modal('hide');
+                   
+                }
+
+                $scope.edit = function(task){
+                    $scope.task = task;
+                    $scope.option = "Edit";
+                    $("#myModal").modal('show');
+                }
+
+
+                $scope.remove = function(task){
+                    $scope.task = task;
+                    $scope.option = "Remove";
+                    $("#myModal").modal('show');
+                    
+                }
+
+                delete_task = function(){
+                    $.ajax({
+                        type: "DELETE",
+                        url: "/api/delete/"+$scope.task.pk+"/",
+                        dataType: 'json',
+                        headers: {"Authorization": "Basic " + btoa($scope.username + ":" + $scope.password)},
+                        data: $scope.task,
+                        success: function (){ alert('deleted'); }
+                    });
+                }
+
+                store_task = function(){
+                    $.ajax({
+                        type: "POST",
+                        url: "/api/create/",
+                        dataType: 'json',
+                        headers: {"Authorization": "Basic " + btoa($scope.username + ":" + $scope.password)},
+                        data: $scope.task,
+                        success: function (){ alert('created'); }
+                    });
+                }
+
+                update_task = function(){
+                    $.ajax({
+                        type: "PUT",
+                        url: "/api/update/"+$scope.task.pk+"/",
+                        dataType: 'json',
+                        headers: {"Authorization": "Basic " + btoa($scope.username + ":" + $scope.password)},
+                        data: $scope.task,
+                        success: function (){ alert('updated'); }
+                    });
+                }
+
+                
+
+            }
+
+            app.controller(controllers);
+        </script>
+    </body>
+</html>
